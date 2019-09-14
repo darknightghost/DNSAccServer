@@ -91,6 +91,10 @@ find_and_inculde ("rapidjson/rapidjson.h")
 find_package (PythonLibs 3 REQUIRED)
 include_directories (${Python3_INCLUDE_DIRS})
 
+#sqlite3
+find_and_inculde ("sqlite3.h")
+find_and_set_library (SQLITE3_LIB "sqlite3")
+
 #################################Targets#######################################
 #Core
 set (CORE_TARGET "dnsaccsrv")
@@ -102,4 +106,5 @@ add_executable (${CORE_TARGET} ${CORE_SOURCES})
 target_link_libraries (${CORE_TARGET} 
 	${UV_LIB}
 	${Python3_LIBRARY}
+	${SQLITE3_LIB}
 	)
