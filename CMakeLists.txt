@@ -44,6 +44,7 @@ set (CMAKE_COMPILE_PDB_OUTPUT_DIRECTORY	"${CMAKE_CURRENT_SOURCE_DIR}/symbols/${O
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY		"${CMAKE_CURRENT_SOURCE_DIR}/bin/${OUTPUT_DIR}")
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY		"${CMAKE_CURRENT_SOURCE_DIR}/lib/${OUTPUT_DIR}")
 set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY		"${CMAKE_CURRENT_SOURCE_DIR}/lib/${OUTPUT_DIR}")
+include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 ###################################Dependencies################################
 #Find and include header
