@@ -17,7 +17,7 @@
 #endif
 
 /**
- * @brief	Libuv event loop.
+ * @brief   Libuv event loop.
  *
  * Libuv event loop.
  */
@@ -26,101 +26,101 @@ class EventLoop {
         /// Types
         template <typename R, typename... Args>
         struct syncCallArgs {
-            EventLoop*						thisPtr;	//< This.
-            R								ret;		//< Return value.
-            ::std::function<R(Args...)>		func;		//< Function to call.
-            ::std::tuple<Args...>			args;		//< Arguments.
-            ::std::mutex					lock;		//< Lock.
-            ::std::condition_variable		cond;		//< Conditional variable to wait.
+            EventLoop*                      thisPtr;    //< This.
+            R                               ret;        //< Return value.
+            ::std::function<R(Args...)>     func;       //< Function to call.
+            ::std::tuple<Args...>           args;       //< Arguments.
+            ::std::mutex                    lock;       //< Lock.
+            ::std::condition_variable       cond;       //< Conditional variable to wait.
         };
 
         template <typename... Args>
         struct syncCallArgs<void, Args...> {
-            EventLoop*						thisPtr;	//< This.
-            ::std::function<void(Args...)>	func;		//< Function to call.
-            ::std::tuple<Args...>			args;		//< Arguments.
-            ::std::mutex					lock;		//< Lock.
-            ::std::condition_variable		cond;		//< Conditional variable to wait.
+            EventLoop*                      thisPtr;    //< This.
+            ::std::function<void(Args...)>  func;       //< Function to call.
+            ::std::tuple<Args...>           args;       //< Arguments.
+            ::std::mutex                    lock;       //< Lock.
+            ::std::condition_variable       cond;       //< Conditional variable to wait.
         };
 
     protected:
         /// Normal members
-        ::uv_loop_t							m_loop;			//< Event loop.
-        volatile bool						m_running;		//< Running status.
-        volatile bool						m_run;			//< Run flag.
-        volatile int						m_exitCode;		//< Exitcode.
-        ::uv_thread_t						m_loopThreadId;	//< Loop thread id.
+        ::uv_loop_t                         m_loop;         //< Event loop.
+        volatile bool                       m_running;      //< Running status.
+        volatile bool                       m_run;          //< Run flag.
+        volatile int                        m_exitCode;     //< Exitcode.
+        ::uv_thread_t                       m_loopThreadId; //< Loop thread id.
 
     protected:
         /// Static members
-        static ::std::shared_ptr<EventLoop>	_instance;			//< Instance
+        static ::std::shared_ptr<EventLoop> _instance;          //< Instance
 
     protected:
         /**
-         * @brief		Constructor.
+         * @brief       Constructor.
          */
         EventLoop();
 
         /**
-         * @brief		Extend tuple as arguments and run callback.
+         * @brief       Extend tuple as arguments and run callback.
          */
         template <typename... Args, std::size_t... I>
-        void			argumentsExtender(::std::function<void(Args...)>	func,
-                                          ::std::tuple<Args...>&			args,
+        void            argumentsExtender(::std::function<void(Args...)>    func,
+                                          ::std::tuple<Args...>&            args,
                                           ::std::index_sequence<I...>) {
             func(std::get<I>(std::forward<::std::tuple<Args...>>(args))...);
             return;
         }
 
         /**
-         * @brief		Extend tuple as arguments and run callback.
+         * @brief       Extend tuple as arguments and run callback.
          */
         template <typename R, typename... Args, std::size_t... I>
-        R				argumentsExtender(::std::function<R(Args...)>	func,
-                                          ::std::tuple<Args...>&		args,
+        R               argumentsExtender(::std::function<R(Args...)>   func,
+                                          ::std::tuple<Args...>&        args,
                                           ::std::index_sequence<I...>) {
             return func(std::get<I>(std::forward<::std::tuple<Args...>>(args))...);
         }
 
     public:
         /**
-         * @brief		Get the instance of loop.
+         * @brief       Get the instance of loop.
          *
-         * @return		Pointer to the instance.
+         * @return      Pointer to the instance.
          */
-        static ::std::shared_ptr<EventLoop>			instance();
+        static ::std::shared_ptr<EventLoop>         instance();
 
         /**
-         * @brief		Get point to the loop of libuv.
+         * @brief       Get point to the loop of libuv.
          *
-         * @return		Pointer to the loop.
+         * @return      Pointer to the loop.
          */
-        ::uv_loop_t*								loop();
+        ::uv_loop_t*                                loop();
 
         /**
-         * @brief		Run the loop, not thread-safe.
+         * @brief       Run the loop, not thread-safe.
          *
-         * @return		Exit code.
+         * @return      Exit code.
          */
-        int											exec();
+        int                                         exec();
 
         /**
-         * @brief		Exit the loop, only loop thread can call it.
+         * @brief       Exit the loop, only loop thread can call it.
          *
-         * @param[in]	exitCode		Exit code.
+         * @param[in]   exitCode        Exit code.
          */
-        void										exit(int exitCode);
+        void                                        exit(int exitCode);
 
         /**
-         * @brief		Destructor.
+         * @brief       Destructor.
          */
-        virtual			~EventLoop();
+        virtual         ~EventLoop();
 
         /**
-         * @brief		Run callback in the loop Synchronically
+         * @brief       Run callback in the loop Synchronically
          */
         template <typename... Args>
-        void				syncCall(::std::function<void(Args...)> func,
+        void                syncCall(::std::function<void(Args...)> func,
                                      Args... args) {
             if(::uv_thread_self() == m_loopThreadId) {
                 /// Call the function
@@ -176,7 +176,7 @@ class EventLoop {
         }
 
         /**
-         * @brief		Run callback in the loop Synchronically
+         * @brief       Run callback in the loop Synchronically
          */
         template <typename R, typename... Args>
         typename ::std::enable_if < !std::is_void<R>::value, R >::type

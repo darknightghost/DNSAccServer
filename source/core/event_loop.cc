@@ -2,10 +2,10 @@
 
 #include <core/event_loop.h>
 
-::std::shared_ptr<EventLoop>	EventLoop::_instance		= nullptr;
+::std::shared_ptr<EventLoop>    EventLoop::_instance        = nullptr;
 
 /**
- * @brief		Constructor.
+ * @brief       Constructor.
  */
 EventLoop::EventLoop() :
     m_running(false),
@@ -17,7 +17,7 @@ EventLoop::EventLoop() :
 }
 
 /**
- * @brief		Destructor.
+ * @brief       Destructor.
  */
 EventLoop::~EventLoop()
 {
@@ -29,9 +29,9 @@ EventLoop::~EventLoop()
 }
 
 /**
- * @brief		Get the instance of loop.
+ * @brief       Get the instance of loop.
  *
- * @return		Pointer to the instance.
+ * @return      Pointer to the instance.
  */
 ::std::shared_ptr<EventLoop> EventLoop::instance()
 {
@@ -44,9 +44,9 @@ EventLoop::~EventLoop()
 }
 
 /**
- * @brief		Get point to the loop of libuv.
+ * @brief       Get point to the loop of libuv.
  *
- * @return		Pointer to the loop.
+ * @return      Pointer to the loop.
  */
 ::uv_loop_t* EventLoop::loop()
 {
@@ -54,9 +54,9 @@ EventLoop::~EventLoop()
 }
 
 /**
- * @brief		Run the loop, not thread-safe.
+ * @brief       Run the loop, not thread-safe.
  *
- * @return		Exit code.
+ * @return      Exit code.
  */
 int EventLoop::exec()
 {
@@ -74,9 +74,9 @@ int EventLoop::exec()
 }
 
 /**
- * @brief		Exit the loop, only loop thread can call it.
+ * @brief       Exit the loop, only loop thread can call it.
  *
- * @param[in]	exitCode		Exit code.
+ * @param[in]   exitCode        Exit code.
  */
 void EventLoop::exit(int exitCode)
 {
