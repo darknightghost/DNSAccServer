@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 project(DNSAccServer)
 
+###################################System#####################################
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 
-#System
 if (CMAKE_SYSTEM_NAME MATCHES "Linux")
 	message (STATUS "Current platform: Linux ")
 
@@ -45,7 +45,7 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY		"${CMAKE_CURRENT_SOURCE_DIR}/bin/${OUTPUT_D
 set (CMAKE_LIBRARY_OUTPUT_DIRECTORY		"${CMAKE_CURRENT_SOURCE_DIR}/lib/${OUTPUT_DIR}")
 set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY		"${CMAKE_CURRENT_SOURCE_DIR}/lib/${OUTPUT_DIR}")
 
-#Dependencies
+###################################Dependencies################################
 #Find and include header
 function (find_and_inculde NAME)
 	#Search file
@@ -88,3 +88,17 @@ find_and_inculde ("rapidjson/rapidjson.h")
 
 #python3
 find_package (PythonLibs 3 REQUIRED)
+include_directories (${Python3_INCLUDE_DIRS})
+
+#################################Targets#######################################
+#Core
+set (CORE_TARGET "dnsaccsrv")
+file (GLOB_RECURSE CORE_SOURCES
+	"source/core/*.cc"
+	"source/core/*.c"
+	)
+add_executable (${CORE_TARGET} ${CORE_SOURCES})
+target_link_libraries (${CORE_TARGET} 
+	${UV_LIB}
+	${Python3_LIBRARY}
+	)
