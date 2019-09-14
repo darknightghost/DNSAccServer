@@ -120,8 +120,8 @@ class EventLoop {
          * @brief		Run callback in the loop Synchronically
          */
         template <typename... Args>
-        void			syncCall(::std::function<void(Args...)> func,
-                                 Args... args) {
+        void				syncCall(::std::function<void(Args...)> func,
+                                     Args... args) {
             if(::uv_thread_self() == m_loopThreadId) {
                 /// Call the function
                 func(args...);
@@ -137,7 +137,7 @@ class EventLoop {
                 /// Prepare for async call
                 ::uv_async_t* asyncHandle = new ::uv_async_t;
                 ::uv_async_init(&m_loop,
-                                &asyncHandle,
+                                asyncHandle,
                 [](uv_async_t* handle) -> void {
                     /// Get infos
                     syncCallArgs<void, Args...>* infos
@@ -179,8 +179,9 @@ class EventLoop {
          * @brief		Run callback in the loop Synchronically
          */
         template <typename R, typename... Args>
-        R				syncCall(::std::function<R(Args...)> func,
-                                 Args... args) {
+        typename ::std::enable_if < !std::is_void<R>::value, R >::type
+        syncCall(::std::function<R(Args...)> func,
+                 Args... args) {
             if(::uv_thread_self() == m_loopThreadId) {
                 /// Call trhe function.
                 return func(args...);
@@ -195,7 +196,7 @@ class EventLoop {
                 /// Prepare for async call
                 ::uv_async_t* asyncHandle = new ::uv_async_t;
                 ::uv_async_init(&m_loop,
-                                &asyncHandle,
+                                asyncHandle,
                 [](uv_async_t* handle) -> void {
                     /// Get infos
                     syncCallArgs<R, Args...>* infos
