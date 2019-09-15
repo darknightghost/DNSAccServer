@@ -80,6 +80,9 @@ macro (find_and_set_library VARNAME NAME)
 	endif ()
 endmacro (find_and_set_library)
 
+#doxygen
+find_package (Doxygen REQUIRED)
+
 #libuv
 find_and_inculde ("uv.h")
 find_and_set_library (UV_LIB "uv")
@@ -128,3 +131,8 @@ endif (UNIX)
 target_link_libraries (${CORE_TARGET} 
 	${CORE_DEP_LIBS}
 	)
+
+#Doc
+add_custom_target("doc" ALL
+	COMMAND				${DOXYGEN_EXECUTABLE}
+	WORKING_DIRECTORY	${CMAKE_CURRENT_SOURCE_DIR})

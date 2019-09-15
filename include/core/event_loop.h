@@ -14,6 +14,8 @@
 
 #include <uv.h>
 
+#include <core/singleton.h>
+
 #if (UV_VERSION_MAJOR < 1 || UV_VERSION_MINOR < 19)
     #error("The version of libuv must be 1.19.0 or above.")
 
@@ -24,7 +26,8 @@
  *
  * Libuv event loop.
  */
-class EventLoop {
+class EventLoop : public Singleton<EventLoop> {
+        SIGNLETON_OBJECT(EventLoop)
     protected:
         /// Types
         template <typename R, typename... Args>
@@ -65,10 +68,6 @@ class EventLoop {
         ::std::mutex                                    m_lock;         //< Flag lock.
 
     protected:
-        /// Static members
-        static ::std::shared_ptr<EventLoop> _instance;          //< Instance
-
-    protected:
         /**
          * @brief       Constructor.
          */
@@ -96,13 +95,6 @@ class EventLoop {
         }
 
     public:
-        /**
-         * @brief       Get the instance of loop.
-         *
-         * @return      Pointer to the instance.
-         */
-        static ::std::shared_ptr<EventLoop>         instance();
-
         /**
          * @brief       Get point to the loop of libuv.
          *

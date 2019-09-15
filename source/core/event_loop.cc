@@ -2,7 +2,11 @@
 
 #include <core/event_loop.h>
 
-::std::shared_ptr<EventLoop>    EventLoop::_instance        = nullptr;
+SINGLETON_CREATE(EventLoop)
+{
+    return ::std::shared_ptr<EventLoop>(new EventLoop());
+}
+
 
 /**
  * @brief       Constructor.
@@ -26,21 +30,6 @@ EventLoop::~EventLoop()
     }
 
     ::uv_loop_close(&m_loop);
-}
-
-/**
- * @brief       Get the instance of loop.
- *
- * @return      Pointer to the instance.
- */
-::std::shared_ptr<EventLoop> EventLoop::instance()
-{
-    if(_instance == nullptr) {
-        /// Create instance
-        _instance = ::std::shared_ptr<EventLoop>(new EventLoop());
-    }
-
-    return _instance;
 }
 
 /**
