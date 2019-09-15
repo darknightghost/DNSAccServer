@@ -95,6 +95,13 @@ include_directories (${Python3_INCLUDE_DIRS})
 find_and_inculde ("sqlite3.h")
 find_and_set_library (SQLITE3_LIB "sqlite3")
 
+if (UNIX)
+	#liboping
+	find_and_inculde ("oping.h")
+	find_and_set_library (OPING_LIB "oping")
+
+endif (UNIX)
+
 #################################Targets#######################################
 #Core
 set (CORE_TARGET "dnsaccsrv")
@@ -103,8 +110,21 @@ file (GLOB_RECURSE CORE_SOURCES
 	"source/core/*.c"
 	)
 add_executable (${CORE_TARGET} ${CORE_SOURCES})
-target_link_libraries (${CORE_TARGET} 
+
+list (APPEND CORE_DEP_LIBS
 	${UV_LIB}
 	${Python3_LIBRARY}
 	${SQLITE3_LIB}
+	)
+
+if (UNIX) 
+	list (APPEND CORE_DEP_LIBS
+		${OPING_LIB}
+		pthread
+		)
+
+endif (UNIX)
+
+target_link_libraries (${CORE_TARGET} 
+	${CORE_DEP_LIBS}
 	)

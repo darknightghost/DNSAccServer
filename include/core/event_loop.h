@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <thread>
 #include <mutex>
@@ -8,6 +9,8 @@
 #include <tuple>
 #include <condition_variable>
 #include <type_traits>
+#include <map>
+#include <set>
 
 #include <uv.h>
 
@@ -43,13 +46,23 @@ class EventLoop {
             ::std::condition_variable       cond;       //< Conditional variable to wait.
         };
 
+        template <typename... Args>
+        struct asyncCallArgs {
+            EventLoop*                      thisPtr;    //< This.
+            ::std::function<void(Args...)>  func;       //< Function to call.
+            ::std::tuple<Args...>           args;       //< Arguments.
+        };
+
     protected:
         /// Normal members
-        ::uv_loop_t                         m_loop;         //< Event loop.
-        volatile bool                       m_running;      //< Running status.
-        volatile bool                       m_run;          //< Run flag.
-        volatile int                        m_exitCode;     //< Exitcode.
-        ::uv_thread_t                       m_loopThreadId; //< Loop thread id.
+        ::uv_loop_t                                     m_loop;         //< Event loop.
+        volatile bool                                   m_running;      //< Running status.
+        volatile bool                                   m_run;          //< Run flag.
+        volatile int                                    m_exitCode;     //< Exitcode.
+        ::uv_thread_t                                   m_loopThreadId; //< Loop thread id.
+        ::std::map<int32_t, ::std::function<void()>>    m_exitCallbacks;//< Exit callbacks.
+        ::std::set<int32_t>                             m_freedIds;     //< Freed callback ids.
+        ::std::mutex                                    m_lock;         //< Flag lock.
 
     protected:
         /// Static members
@@ -98,11 +111,27 @@ class EventLoop {
         ::uv_loop_t*                                loop();
 
         /**
-         * @brief       Run the loop, not thread-safe.
+         * @brief       Run the loop.
          *
          * @return      Exit code.
          */
         int                                         exec();
+
+        /**
+         * @brief       Regist a callback to cleanup when someone called exit.
+         *
+         * @param[in]   callback        Callback.
+         *
+         * @return      ID.
+         */
+        int32_t                                     addExitCallback(::std::function<void()> callback);
+
+        /**
+         * @brief       Remove a callback.
+         *
+         * @param[in]   id      ID.
+         */
+        void                                        removeExitCallback(int32_t id);
 
         /**
          * @brief       Exit the loop, only loop thread can call it.
@@ -115,6 +144,50 @@ class EventLoop {
          * @brief       Destructor.
          */
         virtual         ~EventLoop();
+
+        /**
+         * @brief       Call the callback in the loop.
+         */
+        template <typename... Args>
+        void                asyncCall(::std::function<void(Args...)> func,
+                                      Args... args) {
+            /// Prepare arguments
+            asyncCallArgs<Args...> *infos = new asyncCallArgs<Args...>;
+            infos->thisPtr = this;
+            infos->func = func;
+            infos->args = ::std::tuple<Args...>(args...);
+
+            /// Prepare for async call
+            ::uv_async_t* asyncHandle = new ::uv_async_t;
+            ::uv_async_init(&m_loop,
+                            asyncHandle,
+            [](uv_async_t* handle) -> void {
+                /// Get infos
+                asyncCallArgs<Args...>* infos
+                = (asyncCallArgs<Args...>*)::uv_handle_get_data(
+                    (::uv_handle_t*)handle);
+
+                /// Extend and call function
+                infos->thisPtr->argumentsExtender(
+                    infos->func,
+                    infos->args,
+                    ::std::make_index_sequence <
+                    ::std::tuple_size <
+                    ::std::tuple<Args... >>::value > ());
+
+                /// Close and free handle
+                delete infos;
+                ::uv_close((uv_handle_t*)handle,
+                [](uv_handle_t* handle)->void{
+                    delete(::uv_async_t*)handle;
+                });
+            });
+            ::uv_handle_set_data((::uv_handle_t*)asyncHandle,
+                                 &infos);
+
+            /// Call
+            ::uv_async_send(asyncHandle);
+        }
 
         /**
          * @brief       Run callback in the loop Synchronically

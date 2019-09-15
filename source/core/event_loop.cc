@@ -54,23 +54,97 @@ EventLoop::~EventLoop()
 }
 
 /**
- * @brief       Run the loop, not thread-safe.
+ * @brief       Run the loop.
  *
  * @return      Exit code.
  */
 int EventLoop::exec()
 {
-    m_running = true;
-    m_run = true;
+    {
+        ::std::lock_guard<::std::mutex> guard(m_lock);
 
-    m_loopThreadId = ::uv_thread_self();
+        if(m_running) {
+            return -1;
+        }
+
+        m_running = true;
+        m_run = true;
+        m_loopThreadId = ::uv_thread_self();
+    }
+
 
     while(m_run) {
         ::uv_run(&m_loop, UV_RUN_DEFAULT);
-        ::std::this_thread::sleep_for(::std::chrono::milliseconds(1));
+
+        if(m_run) {
+            ::std::this_thread::sleep_for(::std::chrono::milliseconds(1));
+        }
+    }
+
+    {
+        ::std::lock_guard<::std::mutex> guard(m_lock);
+        m_running = false;
+
+        /// Remove all callbacks.
+        m_exitCallbacks.clear();
+        m_freedIds.clear();
     }
 
     return m_exitCode;
+}
+
+/**
+ * @brief       Regist a callback which will be called when exec() returns.
+ *
+ * @param[in]   callback        Callback.
+ *
+ * @return      ID.
+ */
+int32_t EventLoop::addExitCallback(::std::function<void()> callback)
+{
+    ::std::lock_guard<::std::mutex> guard(m_lock);
+
+    if(m_running && m_run) {
+        /// Allocate id
+        int32_t id;
+
+        if(m_freedIds.size() == 0) {
+            id = (int32_t)m_exitCallbacks.size();
+
+        } else {
+            auto iter = m_freedIds.begin();
+            id = *iter;
+            m_freedIds.erase(iter);
+        }
+
+        /// Add callback
+        m_exitCallbacks[id] = callback;
+        return id;
+
+    } else {
+        return -1;
+    }
+}
+
+/**
+ * @brief       Remove a callback.
+ *
+ * @param[in]   id      ID.
+ */
+void EventLoop::removeExitCallback(int32_t id)
+{
+    ::std::lock_guard<::std::mutex> guard(m_lock);
+
+    if(m_running && m_run) {
+        /// Add callback
+        auto iter = m_exitCallbacks.find(id);
+
+        if(iter != m_exitCallbacks.end()) {
+            m_exitCallbacks.erase(iter);
+            m_freedIds.insert(id);
+        }
+
+    }
 }
 
 /**
@@ -80,7 +154,17 @@ int EventLoop::exec()
  */
 void EventLoop::exit(int exitCode)
 {
-    m_exitCode = exitCode;
-    m_run = false;
-    ::uv_stop(&m_loop);
+    ::std::lock_guard<::std::mutex> guard(m_lock);
+
+    if(m_running && m_run) {
+        ::std::lock_guard<::std::mutex> guard(m_lock);
+        m_exitCode = exitCode;
+
+        /// Call all callbacks.
+        for(auto& pairs : m_exitCallbacks) {
+            this->asyncCall(pairs.second);
+        }
+
+        m_run = false;
+    }
 }
