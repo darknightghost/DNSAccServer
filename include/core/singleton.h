@@ -38,7 +38,7 @@ class Singleton {
 /// Defination of members of singleton classes.
 #define SINGLETON_CREATE(T)   \
     template<> \
-    ::std::shared_ptr<T>    Singleton<T>::_instance = nullptr;  /*< InsTANCE*/\
+    ::std::shared_ptr<T>    Singleton<T>::_instance = nullptr;  /*< Instance*/\
     ::std::shared_ptr<T>    _FORWARD_NAME(T)::create()
 
 /// Declaration of members of singleton classes.
