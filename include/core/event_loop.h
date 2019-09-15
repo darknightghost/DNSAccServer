@@ -75,6 +75,9 @@ class EventLoop : public Singleton<EventLoop> {
 
         /**
          * @brief       Extend tuple as arguments and run callback.
+         *
+         * @param[in]   func        Function to call.
+         * @param[in]   args        Arguments.
          */
         template <typename... Args, std::size_t... I>
         void            argumentsExtender(::std::function<void(Args...)>    func,
@@ -86,6 +89,11 @@ class EventLoop : public Singleton<EventLoop> {
 
         /**
          * @brief       Extend tuple as arguments and run callback.
+         *
+         * @param[in]   func        Function to call.
+         * @param[in]   args        Arguments.
+         *
+         * @return      Return value of func.
          */
         template <typename R, typename... Args, std::size_t... I>
         R               argumentsExtender(::std::function<R(Args...)>   func,
@@ -139,6 +147,9 @@ class EventLoop : public Singleton<EventLoop> {
 
         /**
          * @brief       Call the callback in the loop.
+         *
+         * @param[in]   func        Function to call.
+         * @param[in]   args        Arguments.
          */
         template <typename... Args>
         void                asyncCall(::std::function<void(Args...)> func,
@@ -183,6 +194,9 @@ class EventLoop : public Singleton<EventLoop> {
 
         /**
          * @brief       Run callback in the loop Synchronically
+         *
+         * @param[in]   func        Function to call.
+         * @param[in]   args        Arguments.
          */
         template <typename... Args>
         void                syncCall(::std::function<void(Args...)> func,
@@ -242,13 +256,18 @@ class EventLoop : public Singleton<EventLoop> {
 
         /**
          * @brief       Run callback in the loop Synchronically
+         *
+         * @param[in]   func        Function to call.
+         * @param[in]   args        Arguments.
+         *
+         * @return      The return value of func.
          */
         template <typename R, typename... Args>
         typename ::std::enable_if < !std::is_void<R>::value, R >::type
         syncCall(::std::function<R(Args...)> func,
                  Args... args) {
             if(::uv_thread_self() == m_loopThreadId) {
-                /// Call trhe function.
+                /// Call the function.
                 return func(args...);
 
             } else {
@@ -276,7 +295,7 @@ class EventLoop : public Singleton<EventLoop> {
                         ::std::tuple_size <
                         ::std::tuple<Args... >>::value > ());
 
-                    /// Tell caller the function hasn benn returned.
+                    /// Tell caller the function has been returned.
                     infos->cond.notify_all();
 
                     /// Close and free handle

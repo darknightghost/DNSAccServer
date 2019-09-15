@@ -32,15 +32,23 @@ class Singleton {
         virtual                         ~Singleton() {};
 };
 
+/// Expand T
 #define _FORWARD_NAME(T)  T
 
+/// Defination of members of singleton classes.
 #define SINGLETON_CREATE(T)   \
     template<> \
-    ::std::shared_ptr<T>    Singleton<T>::_instance = nullptr; \
+    ::std::shared_ptr<T>    Singleton<T>::_instance = nullptr;  /*< InsTANCE*/\
     ::std::shared_ptr<T>    _FORWARD_NAME(T)::create()
 
+/// Declaration of members of singleton classes.
 #define SIGNLETON_OBJECT(T) \
     protected: \
+    /**
+     * @brief  Create an instace of the signleton object.
+     *
+     * @return New instance.
+     */ \
     static ::std::shared_ptr<T>     create(); \
     friend ::std::shared_ptr<T>     Singleton<T>::instance(); \
     private:
