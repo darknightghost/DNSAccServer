@@ -21,6 +21,31 @@
 
 #endif
 
+class EventLoop;
+
+template <typename R>
+struct syncCallArgs {
+    EventLoop*                                                  thisPtr;//< This.
+    typename ::std::enable_if < !::std::is_void<R>::value, R >  ret;    //< Return value.
+    ::std::function<R()>                                        func;   //< Function to call.
+    ::std::mutex                                                lock;   //< Lock.
+    ::std::condition_variable                                   cond;   //< Conditional variable to wait.
+};
+
+template <>
+struct syncCallArgs<void> {
+    EventLoop*                      thisPtr;    //< This.
+    ::std::function<void()>         func;       //< Function to call.
+    ::std::mutex                    lock;       //< Lock.
+    ::std::condition_variable       cond;       //< Conditional variable to wait.
+};
+
+template <typename... Args>
+struct asyncCallArgs {
+    EventLoop*                      thisPtr;    //< This.
+    ::std::function<void()>         func;       //< Function to call.
+};
+
 /**
  * @brief   Libuv event loop.
  *
@@ -30,31 +55,6 @@ class EventLoop : public Singleton<EventLoop> {
         SIGNLETON_OBJECT(EventLoop)
     protected:
         /// Types
-        template <typename R, typename... Args>
-        struct syncCallArgs {
-            EventLoop*                      thisPtr;    //< This.
-            R                               ret;        //< Return value.
-            ::std::function<R(Args...)>     func;       //< Function to call.
-            ::std::tuple<Args...>           args;       //< Arguments.
-            ::std::mutex                    lock;       //< Lock.
-            ::std::condition_variable       cond;       //< Conditional variable to wait.
-        };
-
-        template <typename... Args>
-        struct syncCallArgs<void, Args...> {
-            EventLoop*                      thisPtr;    //< This.
-            ::std::function<void(Args...)>  func;       //< Function to call.
-            ::std::tuple<Args...>           args;       //< Arguments.
-            ::std::mutex                    lock;       //< Lock.
-            ::std::condition_variable       cond;       //< Conditional variable to wait.
-        };
-
-        template <typename... Args>
-        struct asyncCallArgs {
-            EventLoop*                      thisPtr;    //< This.
-            ::std::function<void(Args...)>  func;       //< Function to call.
-            ::std::tuple<Args...>           args;       //< Arguments.
-        };
 
     protected:
         /// Normal members
@@ -72,35 +72,6 @@ class EventLoop : public Singleton<EventLoop> {
          * @brief       Constructor.
          */
         EventLoop();
-
-        /**
-         * @brief       Extend tuple as arguments and run callback.
-         *
-         * @param[in]   func        Function to call.
-         * @param[in]   args        Arguments.
-         */
-        template <typename... Args, std::size_t... I>
-        void            argumentsExtender(::std::function<void(Args...)>    func,
-                                          ::std::tuple<Args...>&            args,
-                                          ::std::index_sequence<I...>) {
-            func(std::get<I>(std::forward<::std::tuple<Args...>>(args))...);
-            return;
-        }
-
-        /**
-         * @brief       Extend tuple as arguments and run callback.
-         *
-         * @param[in]   func        Function to call.
-         * @param[in]   args        Arguments.
-         *
-         * @return      Return value of func.
-         */
-        template <typename R, typename... Args, std::size_t... I>
-        R               argumentsExtender(::std::function<R(Args...)>   func,
-                                          ::std::tuple<Args...>&        args,
-                                          ::std::index_sequence<I...>) {
-            return func(std::get<I>(std::forward<::std::tuple<Args...>>(args))...);
-        }
 
     public:
         /**
@@ -157,8 +128,7 @@ class EventLoop : public Singleton<EventLoop> {
             /// Prepare arguments
             asyncCallArgs<Args...> *infos = new asyncCallArgs<Args...>;
             infos->thisPtr = this;
-            infos->func = func;
-            infos->args = ::std::tuple<Args...>(args...);
+            infos->func = ::std::bind(func, args...);
 
             /// Prepare for async call
             ::uv_async_t* asyncHandle = new ::uv_async_t;
@@ -170,13 +140,8 @@ class EventLoop : public Singleton<EventLoop> {
                 = (asyncCallArgs<Args...>*)::uv_handle_get_data(
                     (::uv_handle_t*)handle);
 
-                /// Extend and call function
-                infos->thisPtr->argumentsExtender(
-                    infos->func,
-                    infos->args,
-                    ::std::make_index_sequence <
-                    ::std::tuple_size <
-                    ::std::tuple<Args... >>::value > ());
+                /// Call function
+                infos->func();
 
                 /// Close and free handle
                 delete infos;
@@ -203,15 +168,14 @@ class EventLoop : public Singleton<EventLoop> {
                                      Args... args) {
             if(::uv_thread_self() == m_loopThreadId) {
                 /// Call the function
-                func(args...);
+                ::std::bind(func, args...)();
                 return;
 
             } else {
                 /// Arguments
-                syncCallArgs<void, Args...> infos;
+                syncCallArgs<void> infos;
                 infos.thisPtr = this;
-                infos.func = func;
-                infos.args = ::std::tuple<Args...>(args...);
+                infos.func = ::std::bind(func, args...);
 
                 /// Prepare for async call
                 ::uv_async_t* asyncHandle = new ::uv_async_t;
@@ -219,17 +183,12 @@ class EventLoop : public Singleton<EventLoop> {
                                 asyncHandle,
                 [](uv_async_t* handle) -> void {
                     /// Get infos
-                    syncCallArgs<void, Args...>* infos
-                    = (syncCallArgs<void, Args...>*)::uv_handle_get_data(
+                    syncCallArgs<void>* infos
+                    = (syncCallArgs<void>*)::uv_handle_get_data(
                         (::uv_handle_t*)handle);
 
                     /// Extend and call function
-                    infos->thisPtr->argumentsExtender(
-                        infos->func,
-                        infos->args,
-                        ::std::make_index_sequence <
-                        ::std::tuple_size <
-                        ::std::tuple<Args... >>::value > ());
+                    infos->func();
 
                     /// Tell caller the function hasn benn returned.
                     infos->cond.notify_all();
@@ -268,14 +227,13 @@ class EventLoop : public Singleton<EventLoop> {
                  Args... args) {
             if(::uv_thread_self() == m_loopThreadId) {
                 /// Call the function.
-                return func(args...);
+                return ::std::bind(func, args...)();
 
             } else {
                 /// Arguments
-                syncCallArgs<R, Args...> infos;
+                syncCallArgs<R> infos;
                 infos.thisPtr = this;
-                infos.func = func;
-                infos.args = ::std::tuple<Args...>(args...);
+                infos.func = ::std::bind(func, args...);
 
                 /// Prepare for async call
                 ::uv_async_t* asyncHandle = new ::uv_async_t;
@@ -283,17 +241,12 @@ class EventLoop : public Singleton<EventLoop> {
                                 asyncHandle,
                 [](uv_async_t* handle) -> void {
                     /// Get infos
-                    syncCallArgs<R, Args...>* infos
-                    = (syncCallArgs<R, Args...>*)::uv_handle_get_data(
+                    syncCallArgs<R>* infos
+                    = (syncCallArgs<R>*)::uv_handle_get_data(
                         (::uv_handle_t*)handle);
 
                     /// Extend and call function
-                    infos->ret = infos->thisPtr->argumentsExtender(
-                        infos->func,
-                        infos->args,
-                        ::std::make_index_sequence <
-                        ::std::tuple_size <
-                        ::std::tuple<Args... >>::value > ());
+                    infos->ret = infos->func();
 
                     /// Tell caller the function has been returned.
                     infos->cond.notify_all();
