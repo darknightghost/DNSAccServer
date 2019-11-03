@@ -1,7 +1,10 @@
-#include <stdio.h>
-#include <core/event_loop.h>
+#include <cstdio>
 
-int main()
+#include <common/common.h>
+
+int main(int argc, const char* argv[])
 {
+    UNUSED_PARAMTER(argc);
+    UNUSED_PARAMTER(argv);
     return 0;
 }

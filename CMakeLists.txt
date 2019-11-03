@@ -19,20 +19,14 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
 	message (STATUS "Build type : Release")
 
 	#Flags
-	if (UNIX)
-		add_compile_options("-Wall" "-Werror" "-O2")
-
-	endif ()
+	add_compile_options("-Wall" "-Werror" "-O2")
 
 else ()
 	message (STATUS "Build type : Debug")
 	set (CMAKE_BUILD_TYPE "Debug")
 
 	#Flags
-	if (UNIX)
-		add_compile_options("-Wall" "-O0")
-
-	endif ()
+	add_compile_options("-Wall" "-O0")
 
 endif ()
 
@@ -48,7 +42,7 @@ include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 ###################################Dependencies################################
 #Find and include header
-function (find_and_inculde NAME)
+function (find_and_include NAME)
 	#Search file
 	unset (FIND_RESULT CACHE)
 	unset (FIND_RESULT_DIR_NAME CACHE)
@@ -65,7 +59,7 @@ function (find_and_inculde NAME)
 		include_directories ("${FIND_RESULT_DIR_NAME}")
 
 	endif ()
-endfunction (find_and_inculde)
+endfunction (find_and_include)
 
 #Find library
 macro (find_and_set_library VARNAME NAME)
@@ -83,27 +77,20 @@ endmacro (find_and_set_library)
 #doxygen
 find_package (Doxygen REQUIRED)
 
-#libuv
-find_and_inculde ("uv.h")
-find_and_set_library (UV_LIB "uv")
-
 #rapidjson
-find_and_inculde ("rapidjson/rapidjson.h")
+find_and_include ("rapidjson/rapidjson.h")
 
 #python3
 find_package (PythonLibs 3 REQUIRED)
 include_directories (${Python3_INCLUDE_DIRS})
 
 #sqlite3
-find_and_inculde ("sqlite3.h")
+find_and_include ("sqlite3.h")
 find_and_set_library (SQLITE3_LIB "sqlite3")
 
-if (UNIX)
-	#liboping
-	find_and_inculde ("oping.h")
-	find_and_set_library (OPING_LIB "oping")
-
-endif (UNIX)
+#log4cplus
+find_and_include ("log4cplus/logger.h")
+find_and_set_library (LOG4CPLUS_LIB "log4cplus")
 
 #################################Targets#######################################
 #Core
@@ -114,22 +101,11 @@ file (GLOB_RECURSE CORE_SOURCES
 	)
 add_executable (${CORE_TARGET} ${CORE_SOURCES})
 
-list (APPEND CORE_DEP_LIBS
-	${UV_LIB}
+target_link_libraries (${CORE_TARGET} 
 	${Python3_LIBRARY}
 	${SQLITE3_LIB}
-	)
-
-if (UNIX) 
-	list (APPEND CORE_DEP_LIBS
-		${OPING_LIB}
-		pthread
-		)
-
-endif (UNIX)
-
-target_link_libraries (${CORE_TARGET} 
-	${CORE_DEP_LIBS}
+	${LOG4CPLUS_LIB}
+	pthread
 	)
 
 #Doc
