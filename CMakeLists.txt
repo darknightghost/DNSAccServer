@@ -93,13 +93,20 @@ find_and_include ("log4cplus/logger.h")
 find_and_set_library (LOG4CPLUS_LIB "log4cplus")
 
 #################################Targets#######################################
+#Common
+file (GLOB_RECURSE COMMON_SOURCES
+	"source/common/*.cc"
+	"source/common/*.c"
+	)
+
 #Core
 set (CORE_TARGET "dnsaccsrv")
 file (GLOB_RECURSE CORE_SOURCES
 	"source/core/*.cc"
 	"source/core/*.c"
 	)
-add_executable (${CORE_TARGET} ${CORE_SOURCES})
+
+add_executable (${CORE_TARGET} ${CORE_SOURCES} ${COMMON_SOURCES})
 
 target_link_libraries (${CORE_TARGET} 
 	${Python3_LIBRARY}

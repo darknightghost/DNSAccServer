@@ -3,12 +3,16 @@
 #include <memory>
 #include <mutex>
 
+#include <common/interfaces/i_is_good.h>
+
+namespace dnsAccServer {
+
 /**
  * @brief   Base class of signleton object.
  *
  */
 template <class T, typename... Args>
-class Singleton {
+class Singleton : virtual public IIsGood {
     protected:
         static ::std::shared_ptr<T>         _instance;      //< Instance.
         static ::std::mutex                 _instanceLock;  //< Instance lock.
@@ -38,8 +42,6 @@ class Singleton {
 
         /**
          * @brief       Get.
-         *
-         * @param[in]   args        Arguments of constructor.
          *
          * @return      If the instalce has been initialized, the method
          *              returns the instance, otherwise returns nullptr.
@@ -89,6 +91,10 @@ template <class T, typename... Args>
         /// Create new instance
         _instance = ::std::shared_ptr<T>(new T(args...));
 
+        if(!_instance->good()) {
+            _instance = nullptr;
+        }
+
     }
 
     return _instance;
@@ -106,4 +112,6 @@ template <class T, typename... Args>
 ::std::shared_ptr<T> Singleton<T, Args...>::instance()
 {
     return _instance;
+}
+
 }

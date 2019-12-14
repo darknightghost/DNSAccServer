@@ -4,24 +4,42 @@
 #include <vector>
 #include <type_traits>
 
-#include <common/design_models.h>
 #include <rapidjson/document.h>
+
+#include <common/design_models/singleton.h>
+#include <common/config/config_node.h>
+
+namespace dnsAccServer {
 
 /**
  * @brief   Config.
  */
-class Config : public Singleton<Config, const ::std::string&> {
+class Config : public Singleton<Config, const ::std::string&, ::std::string&> {
     protected:
-        ::std::string&                  m_path;     //< Path of config file.
+        const ::std::string             m_path;     //< Path of config file.
         ::rapidjson::Document           m_document; //< Json document.
+
+    protected:
+        static ::std::vector<::std::shared_ptr<ConfigNode>>         _registedNodes; //< Registed config nodes
 
     protected:
         /**
          * @brief       Constructor.
          *
          * @param[in]   path        Path of config file.
+         * @param[out]  err         Error info if falied.
          */
-        Config(const ::std::string& path);
+        Config(const ::std::string& path,
+               ::std::string&       err);
+
+    public:
+        /**
+         * @brief       Regist config node.
+         *
+         * @param[in]   node        Config node.
+         */
+        static void     registerConfigNode(
+            ::std::shared_ptr<ConfigNode>       node);
 
     public:
         /**
@@ -176,29 +194,6 @@ class Config : public Singleton<Config, const ::std::string&> {
                                   const ::std::string&    defaultValue);
 
         /**
-         * @brief       Get array of values by path.
-         *
-         * @param[in]   path            Path.
-         *
-         * @return      If the array exists, a vector contains values in the
-         *              array is returned, otherwise returns an empty vector.
-         */
-        template <typename T>
-        ::std::vector < typename
-        ::std::enable_if <::std::is_same<T, int8_t>::value
-        ||::std::is_same<T, uint8_t>::value
-        ||::std::is_same<T, int16_t>::value
-        ||::std::is_same<T, uint16_t>::value
-        ||::std::is_same<T, int32_t>::value
-        ||::std::is_same<T, uint32_t>::value
-        ||::std::is_same<T, int64_t>::value
-        ||::std::is_same<T, uint64_t>::value
-        ||::std::is_same<T, float>::value
-        ||::std::is_same<T, double>::value
-        ||::std::is_same<T, bool>::value,
-        T >::type >      getArray(const ::std::string& path);
-
-        /**
          * @brief   Destructor.
          */
         virtual     ~Config();
@@ -208,23 +203,88 @@ class Config : public Singleton<Config, const ::std::string&> {
          * @brief       Implements of getXXX functions.
          *
          * @param[in]   path            Path.
-         * @param[in]   defaultValue    Default value.
+         * @param[out]  value           Value returned.
          *
-         * @return      If the values exists, the value is returned, otherwise
-         *              returns default value.
+         * @return      If the values exists, true is returned, otherwise
+         *              returns false.
          */
         template <typename T>
-        typename ::std::enable_if <::std::is_same<T, int8_t>::value
-        ||::std::is_same<T, uint8_t>::value
-        ||::std::is_same<T, int16_t>::value
-        ||::std::is_same<T, uint16_t>::value
-        ||::std::is_same<T, int32_t>::value
-        ||::std::is_same<T, uint32_t>::value
-        ||::std::is_same<T, int64_t>::value
-        ||::std::is_same<T, uint64_t>::value
-        ||::std::is_same<T, float>::value
-        ||::std::is_same<T, double>::value
-        ||::std::is_same<T, bool>::value,
-        T >::type        getBasicValueImpl(const ::std::string&  path,
-                                           T                     defaultValue);
+        bool        getValueImpl(
+            const ::std::string&  path,
+            typename ::std::enable_if <
+            ::std::is_same<T, int8_t>::value
+            ||::std::is_same<T, int16_t>::value
+            ||::std::is_same<T, int32_t>::value
+            ||::std::is_same<T, int64_t>::value,
+            T >::type&             value);
+
+        /**
+         * @brief       Implements of getXXX functions.
+         *
+         * @param[in]   path            Path.
+         * @param[out]  value           Value returned.
+         *
+         * @return      If the values exists, true is returned, otherwise
+         *              returns false.
+         */
+        template <typename T>
+        bool        getValueImpl(
+            const ::std::string&  path,
+            typename ::std::enable_if <
+            ::std::is_same<T, uint8_t>::value
+            ||::std::is_same<T, uint16_t>::value
+            ||::std::is_same<T, uint32_t>::value
+            ||::std::is_same<T, uint64_t>::value,
+            T >::type&             value);
+
+        /**
+         * @brief       Implements of getXXX functions.
+         *
+         * @param[in]   path            Path.
+         * @param[out]  value           Value returned.
+         *
+         * @return      If the values exists, true is returned, otherwise
+         *              returns false.
+         */
+        template <typename T>
+        bool        getValueImpl(
+            const ::std::string&  path,
+            typename ::std::enable_if <
+            ::std::is_same<T, float>::value
+            ||::std::is_same<T, double>::value,
+            T >::type&             value);
+
+        /**
+         * @brief       Implements of getXXX functions.
+         *
+         * @param[in]   path            Path.
+         * @param[out]  value           Value returned.
+         *
+         * @return      If the values exists, true is returned, otherwise
+         *              returns false.
+         */
+        template <typename T>
+        bool        getValueImpl(
+            const ::std::string&  path,
+            typename ::std::enable_if <
+            ::std::is_same<T, bool>::value,
+            T >::type&             value);
+
+        /**
+         * @brief       Implements of getXXX functions.
+         *
+         * @param[in]   path            Path.
+         * @param[out]  value           Value returned.
+         *
+         * @return      If the values exists, true is returned, otherwise
+         *              returns false.
+         */
+        template <typename T>
+        bool        getValueImpl(
+            const ::std::string&  path,
+            typename ::std::enable_if <
+            ::std::is_same<T, ::std::string>::value,
+            T >::type&             value);
+
 };
+}
