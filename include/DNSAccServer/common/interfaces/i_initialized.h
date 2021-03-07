@@ -1,5 +1,24 @@
+/**
+ * Copyright 2021, 王思远 <darknightghost.cn@gmail.com>
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by the Free Software
+ * Foundation, either version 3 of the License, or at your option) any later
+ * version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #pragma once
+
 #include <type_traits>
+
+namespace common {
 
 /**
  * @brief   Interface to provide initialized flag.
@@ -20,7 +39,7 @@ class IInitialized {
     /**
      * @brief       Set initialized flag.
      */
-    void setInitialized();
+    inline void setInitialized();
 
   public:
     /**
@@ -28,7 +47,7 @@ class IInitialized {
      *
      * @return      Value of initialized flag.
      */
-    bool initialized();
+    inline bool initialized();
 
     /**
      * @brief       Destructor.
@@ -70,3 +89,5 @@ bool IInitialized<T>::initialized()
 template<class T>
 IInitialized<T>::~IInitialized()
 {}
+
+} // namespace common

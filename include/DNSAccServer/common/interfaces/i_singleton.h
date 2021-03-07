@@ -24,53 +24,71 @@
 namespace common {
 
 /**
- * @brief   Interface to provide a static create method.
+ * @brief   Interface to provide a singleton object.
  *
  * @tparam  T       Final class which implements this interface.
  * @tparam  Args    Types of arguments of the constructor of the class which
  *                  implements this interface.
  */
 template<class T, typename... Args>
-class ICreateFunc : virtual public IInitialized<T>, virtual public IThisPtr<T> {
+class ISingleton : virtual public IInitialized<T>, virtual public IThisPtr<T> {
+  private:
+    static ::std::shared_ptr<T> _instance; ///< Instance.
+
   protected:
     /**
-     * @brief       Constructor.
+     * @brief     Constructor.
      */
-    ICreateFunc();
+    ISingleton();
 
   public:
     /**
-     * @brief       Create object.
+     * @brief       Initialize the instance with teh arguments if not
+     *              initialized.
      *
      * @param[in]   args    Arguments of the constructor.
      *
-     * @return      On success, the new object is returned. Otherwise returns
-     *              \c nullptr.
+     * @return      If the instance is initialized, the method will return the
+     *              existing instace. If not, the method will initialize a new
+     *              instance and return it if success, otherwise returns \c
+     *              nullptr.
      */
-    static inline ::std::shared_ptr<T> create(Args &...args);
+    static inline ::std::shared_ptr<T> initialize(Args &...args);
+
+    /**
+     * @brief       Get the instance of the object.
+     *
+     * @return      If initialize, the method will return the initialized
+     *              inscance, otherwise returns \c nullptr.
+     */
+    static inline ::std::shared_ptr<T> instance();
 
     /**
      * @brief       Destructor.
      */
-    virtual ~ICreateFunc();
+    virtual ~ISingleton();
 };
 
 /**
  * @brief     Constructor.
  */
 template<class T, typename... Args>
-ICreateFunc<T, Args...>::ICreateFunc()
+ISingleton<T, Args...>::ISingleton()
 {
-    static_assert(::std::is_base_of<ICreateFunc<T, Args...>, T>::value,
-                  "ICreateFunc<T, Args...> is not a base class of T.");
+    static_assert(::std::is_base_of<ISingleton<T, Args...>, T>::value,
+                  "ISingleton<T, Args...> is not a base class of T.");
 }
 
 /**
  * @brief     Create object.
  */
 template<class T, typename... Args>
-::std::shared_ptr<T> ICreateFunc<T, Args...>::create(Args &...args)
+::std::shared_ptr<T> ISingleton<T, Args...>::initialize(Args &...args)
 {
+    if (_instance != nullptr) {
+        return _instance;
+    }
+
     // Create object.
     ::std::shared_ptr<T> ret
         = ::std::shared_ptr<T>(new T(::std::forward<Args &...>(args)...));
@@ -84,18 +102,28 @@ template<class T, typename... Args>
 
     } else {
         ret->setThisPtr(ret);
+        _instance = ret;
         return ret;
     }
+}
+
+/**
+ * @brief       Get the instance of the object.
+ */
+template<class T, typename... Args>
+::std::shared_ptr<T> ISingleton<T, Args...>::instance()
+{
+    return _instance;
 }
 
 /**
  * @brief       Destructor.
  */
 template<class T, typename... Args>
-ICreateFunc<T, Args...>::~ICreateFunc()
+ISingleton<T, Args...>::~ISingleton()
 {}
 
-#define CREATE_FUNC(T, ...) \
-    friend class ::common::ICreateFunc<T, ##__VA_ARGS__>;
+#define SINGLETON_OBJECT(T, ...) \
+    friend class ::common::ISingleton<T, ##__VA_ARGS__>;
 
 } // namespace common

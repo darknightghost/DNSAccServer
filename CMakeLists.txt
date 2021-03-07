@@ -33,7 +33,7 @@ message (STATUS "Target Processor - ${CMAKE_SYSTEM_PROCESSOR}.")
 # Environment.
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-#Options
+# Options
 add_compile_options("-fPIC" "-fexceptions" "-g")
 
 # Output path.
@@ -42,6 +42,8 @@ set (OUTPUT_SUB_DIR "${CMAKE_BUILD_TYPE}/${CMAKE_SYSTEM_NAME}/${CMAKE_SYSTEM_PRO
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY	"${CMAKE_CURRENT_SOURCE_DIR}/lib/${OUTPUT_SUB_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY	"${CMAKE_CURRENT_SOURCE_DIR}/lib/${OUTPUT_SUB_DIR}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY	"${CMAKE_CURRENT_SOURCE_DIR}/bin/${OUTPUT_SUB_DIR}")
+
+link_directories ("${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 
 # Platform options.
 # Debug/Release.
@@ -108,38 +110,58 @@ function (find_system_library)
 
 endfunction ()
 
-#Doxygen
+# Doxygen
 find_package (Doxygen REQUIRED)
 
-#rapidjson
-find_system_library (NAME   rapidjson
-    HEADERS     "rapidjson/rapidjson.h")
-include_directories ("${rapidjson_INCLUDE_DIRS}")
-
-#python3
-find_package (PythonLibs 3 REQUIRED)
-include_directories (${Python3_INCLUDE_DIRS})
-
 #################################Targets#######################################
-#Common
+# Common
+set (COMMON_TARGET "common")
 file (GLOB_RECURSE COMMON_SOURCES
 	"source/common/*.cc"
 	"source/common/*.c"
 	)
 
-#Core
-set (CORE_TARGET "dnsaccsrv")
-file (GLOB_RECURSE CORE_SOURCES
-	"source/core/*.cc"
-	"source/core/*.c"
+add_library (${COMMON_TARGET}    STATIC
+    ${COMMON_SOURCES})
+
+# Logger
+set (LOGGER_TARGET "logger")
+file (GLOB_RECURSE LOGGER_SOURCES
+	"source/logger/*.cc"
+	"source/logger/*.c"
 	)
 
-add_executable (${CORE_TARGET} ${CORE_SOURCES} ${COMMON_SOURCES})
+add_library (${LOGGER_TARGET}    STATIC
+    ${LOGGER_SOURCES})
+add_dependencies (${LOGGER_TARGET} 
+    ${COMMON_TARGET})
 
-target_link_libraries (${CORE_TARGET} 
-	${Python3_LIBRARY}
-	pthread
-	)
+# Service
+option (BUILD_SERVICE "Build core service." ON)
+
+if (BUILD_SERVICE)
+## python3
+    find_package (PythonLibs 3 REQUIRED)
+    include_directories (${Python3_INCLUDE_DIRS})
+
+    set (SERVICE_TARGET "dnsaccsrv")
+    file (GLOB_RECURSE SERVICE_SOURCES
+        "source/service/*.cc"
+        "source/service/*.c"
+        )
+
+    add_executable (${SERVICE_TARGET} 
+        ${SERVICE_SOURCES})
+    add_dependencies (${SERVICE_TARGET} 
+        ${COMMON_TARGET} 
+        ${LOGGER_TARGET})
+    target_link_libraries (${CORE_TARGET} 
+        ${LOGGER_TARGET}
+        ${COMMON_TARGET}
+        ${Python3_LIBRARY}
+        pthread
+        )
+endif ()
 
 #Doc
 add_custom_target("doc" ALL
