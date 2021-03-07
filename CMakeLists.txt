@@ -43,6 +43,22 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY	"${CMAKE_CURRENT_SOURCE_DIR}/lib/${OUTPUT_SUB
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY	"${CMAKE_CURRENT_SOURCE_DIR}/lib/${OUTPUT_SUB_DIR}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY	"${CMAKE_CURRENT_SOURCE_DIR}/bin/${OUTPUT_SUB_DIR}")
 
+# Platform options.
+# Debug/Release.
+# Enable address sanitizer in debug mode if possible.
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+	if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang"
+			OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang"
+			OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+		# Enable address sanitizer.
+		add_compile_options (-fno-omit-frame-pointer -fsanitize=address)
+		add_link_options (-fno-omit-frame-pointer -fsanitize=address)
+		message (STATUS "Address sanitizer is enabled.")
+
+	endif()
+
+endif ()
+
 ###################################Dependencies################################
 
 function (find_system_library)
