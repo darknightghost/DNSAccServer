@@ -3,5 +3,4 @@
 /**
  * @brief   Event loop.
  */
-class EventLoop {
-};
+class EventLoop {};

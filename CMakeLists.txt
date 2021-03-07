@@ -3,94 +3,106 @@ cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 project(DNSAccServer)
 
 ###################################System#####################################
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 
-if (CMAKE_SYSTEM_NAME MATCHES "Linux")
-	message (STATUS "Current platform: Linux ")
-
-else ()
-	message (FATAL_ERROR "Not supported.")
-
-endif ()
-
-#Debug or release
-if (CMAKE_BUILD_TYPE STREQUAL "Release")
-	message (STATUS "Build type : Release")
-
-	#Flags
-	add_compile_options("-Wall" "-Werror" "-O2")
-
-else ()
-	message (STATUS "Build type : Debug")
+# Build type
+if (NOT CMAKE_BUILD_TYPE)
 	set (CMAKE_BUILD_TYPE "Debug")
 
-	#Flags
-	add_compile_options("-Wall" "-O0")
+endif ()
+
+if (NOT UNIX)
+    message (FATAL_ERROR        "Operation system is not supported.")
 
 endif ()
+
+set (CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}"  CACHE STRING "${CMAKE_BUILD_TYPE}" FORCE)
+
+if (GENERATOR_IS_MULTI_CONFIG OR CMAKE_CONFIGURATION_TYPES)
+    set (CMAKE_CONFIGURATION_TYPES "${CMAKE_BUILD_TYPE}" CACHE STRING "${CMAKE_BUILD_TYPE}" FORCE)
+
+endif()
+
+message (STATUS "Build Type - ${CMAKE_BUILD_TYPE}.")
+message (STATUS "Host System - ${CMAKE_HOST_SYSTEM_NAME}.")
+message (STATUS "Host Processor - ${CMAKE_HOST_SYSTEM_PROCESSOR}.")
+message (STATUS "Target System - ${CMAKE_SYSTEM_NAME}.")
+message (STATUS "Target Processor - ${CMAKE_SYSTEM_PROCESSOR}.")
+
+# Environment.
+include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 #Options
 add_compile_options("-fPIC" "-fexceptions" "-g")
-set (OUTPUT_DIR "${CMAKE_SYSTEM_PROCESSOR}/${CMAKE_BUILD_TYPE}")
 
-set (CMAKE_COMPILE_PDB_OUTPUT_DIRECTORY	"${CMAKE_CURRENT_SOURCE_DIR}/symbols/${OUTPUT_DIR}")
-set (CMAKE_RUNTIME_OUTPUT_DIRECTORY		"${CMAKE_CURRENT_SOURCE_DIR}/bin/${OUTPUT_DIR}")
-set (CMAKE_LIBRARY_OUTPUT_DIRECTORY		"${CMAKE_CURRENT_SOURCE_DIR}/lib/${OUTPUT_DIR}")
-set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY		"${CMAKE_CURRENT_SOURCE_DIR}/lib/${OUTPUT_DIR}")
-include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
+# Output path.
+set (OUTPUT_SUB_DIR "${CMAKE_BUILD_TYPE}/${CMAKE_SYSTEM_NAME}/${CMAKE_SYSTEM_PROCESSOR}")
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY	"${CMAKE_CURRENT_SOURCE_DIR}/lib/${OUTPUT_SUB_DIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY	"${CMAKE_CURRENT_SOURCE_DIR}/lib/${OUTPUT_SUB_DIR}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY	"${CMAKE_CURRENT_SOURCE_DIR}/bin/${OUTPUT_SUB_DIR}")
 
 ###################################Dependencies################################
-#Find and include header
-function (find_and_include NAME)
-	#Search file
-	unset (FIND_RESULT CACHE)
-	unset (FIND_RESULT_DIR_NAME CACHE)
-	find_file (FIND_RESULT ${NAME})
-	if (FIND_RESULT STREQUAL "FIND_RESULT-NOTFOUND")
-		message (FATAL_ERROR "Cannot find file \"${NAME}\".")
 
-	else ()
-		message (STATUS "Found file \"${FIND_RESULT}\".")
+function (find_system_library)
+    cmake_parse_arguments (ARGVAL "" "NAME" "HEADERS;LIBRARIES" ${ARGN})
 
-		find_path (FIND_RESULT_DIR_NAME "${NAME}")
+    # Search header files.
+    set (_dirs_found "")
+    foreach (header IN LISTS ARGVAL_HEADERS)
+        find_path (_ret  "${header}")
+        if(_ret)
+            message (STATUS "File \"${_ret}/${header}\" found.")
+            list (APPEND _dirs_found "${_ret}")
+            unset (_ret  CACHE)
 
-		#Include directory
-		include_directories ("${FIND_RESULT_DIR_NAME}")
+        else ()
+            unset (_ret  CACHE)
+            unset (_dirs_found)
+            message (FATAL_ERROR "Failed to find header file \"${header}\".")
 
-	endif ()
-endfunction (find_and_include)
+        endif()
 
-#Find library
-macro (find_and_set_library VARNAME NAME)
-	#Search library
-	find_library (${VARNAME} "${NAME}")
-	if (${VARNAME} STREQUAL "${VARNAME}-NOTFOUND")
-		message (FATAL_ERROR "Cannot find library \"${NAME}\".")
+    endforeach ()
 
-	else ()
-		message (STATUS "Found library \"${${VARNAME}}\".")
+    set (${ARGVAL_NAME}_INCLUDE_DIRS "${_dirs_found}" CACHE STRING INTERNAL)
+    unset (_dirs_found)
 
-	endif ()
-endmacro (find_and_set_library)
+    # Search library files.
+    set (_libs_found "")
+    foreach (lib IN LISTS ARGVAL_LIBRARIES)
+        find_library (_ret  "${lib}")
+        if(_ret)
+            message (STATUS "Library \"${_ret}\" found.")
+            list (APPEND _libs_found "${_ret}")
+            unset (_ret  CACHE)
 
-#doxygen
+        else ()
+            unset (_ret  CACHE)
+            unset (_libs_found)
+            message (FATAL_ERROR "Failed to find library \"${lib}\".")
+
+        endif()
+
+    endforeach ()
+
+    set (${ARGVAL_NAME}_LIBS "${_libs_found}" CACHE STRING INTERNAL)
+    unset (_libs_found)
+
+endfunction ()
+
+#Doxygen
 find_package (Doxygen REQUIRED)
 
 #rapidjson
-find_and_include ("rapidjson/rapidjson.h")
+find_system_library (NAME   rapidjson
+    HEADERS     "rapidjson/rapidjson.h")
+include_directories ("${rapidjson_INCLUDE_DIRS}")
 
 #python3
 find_package (PythonLibs 3 REQUIRED)
 include_directories (${Python3_INCLUDE_DIRS})
-
-#sqlite3
-find_and_include ("sqlite3.h")
-find_and_set_library (SQLITE3_LIB "sqlite3")
-
-#log4cplus
-find_and_include ("log4cplus/logger.h")
-find_and_set_library (LOG4CPLUS_LIB "log4cplus")
 
 #################################Targets#######################################
 #Common
@@ -110,8 +122,6 @@ add_executable (${CORE_TARGET} ${CORE_SOURCES} ${COMMON_SOURCES})
 
 target_link_libraries (${CORE_TARGET} 
 	${Python3_LIBRARY}
-	${SQLITE3_LIB}
-	${LOG4CPLUS_LIB}
 	pthread
 	)
 

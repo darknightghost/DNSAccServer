@@ -1,10 +1,6 @@
-#include <cstdio>
+#include <cstdint>
 
-#include <common/common.h>
-
-int main(int argc, const char* argv[])
+int main(int argc, char *argv[])
 {
-    UNUSED_PARAMTER(argc);
-    UNUSED_PARAMTER(argv);
     return 0;
 }
